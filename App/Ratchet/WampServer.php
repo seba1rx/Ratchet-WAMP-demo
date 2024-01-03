@@ -31,7 +31,15 @@ class WampServer implements WampServerInterface {
     }
 
     /**
+     * Process RPC calls
      * see more in https://github.com/cboden/Ratchet-examples/blob/master/src/Website/ChatRoom.php
+     *
+     * be careful not to override the onCall method, specially $id
+     *
+     * @param ConnectionInterface $conn     The connection object loaded with the Ratchet\Wamp\WampConnection methods
+     * @param $id                           The unique id gigen to the client to respond to
+     * @param $callable                     The topic object (yes, RPC method is trated as a topic)
+     * @param array $params                 The array params given to the RPC method, if any
      */
     public function onCall(ConnectionInterface $conn, $id, $callable, array $params) {
         // $callable is the same as $topic
@@ -58,8 +66,8 @@ class WampServer implements WampServerInterface {
                 /**
                  * example of RPC calling a method defined in another class, using arguments
                  */
-                $id = $params[0];
-                $joke = KnockKnockJokes::getJokeById($id);
+                $joke_id = $params[0];
+                $joke = KnockKnockJokes::getJokeById($joke_id);
                 return $conn->callResult($id, array('joke' => $joke));
                 break;
 
@@ -71,9 +79,14 @@ class WampServer implements WampServerInterface {
     }
 
     /**
+     * The method to handle subscription events from clients
+     *
      * Since WampServer adds and removes subscribers to Topics automatically,
-     * I just need to keep track of topics in order to acces them if the method
-     * does not provide an interface to the topic object
+     * I just need to keep track of topics in order to access them if other methods
+     * don't provide an interface to the topic object (like onMessageToPush)
+     *
+     * @param ConnectionInterface $conn     The connection object
+     * @param $topic                        The topic object
      */
     public function onSubscribe(ConnectionInterface $conn, $topic) {
 
@@ -94,6 +107,12 @@ class WampServer implements WampServerInterface {
         $topic->broadcast($messageData);
     }
 
+    /**
+     * The method to handle the onUnsubscribe events
+     *
+     * @param ConnectionInterface $conn     The connection object
+     * @param $topic                        The topic object
+     */
     public function onUnSubscribe(ConnectionInterface $conn, $topic) {
 
         Logger::debug($this, "Client id ({$conn->resourceId}) unsubscribing from " . $topic->getId());
@@ -118,6 +137,15 @@ class WampServer implements WampServerInterface {
         $topic->broadcast($messageData);
     }
 
+    /**
+     * The method to handle publish events
+     *
+     * @param ConnectionInterface $conn     The connection object
+     * @param $topic                        The topic object
+     * @param $msg                          The msg string
+     * @param array $exclude                The array of excluded subscribers to the topic being published to
+     * @param array $eligible               The array of eligible subscribers to the topic being published to
+     */
     public function onPublish(ConnectionInterface $conn, $topic, $msg, array $exclude, array $eligible) {
         Logger::debug($this, "new publish event on topic {$topic->getId()} from IP {$conn->remoteAddress} client_id {$conn->resourceId} msg: {$msg}");
 
@@ -132,11 +160,27 @@ class WampServer implements WampServerInterface {
         $this->onMessageToPush($data);
     }
 
+    /**
+     * The method defining the onOpen event of each client making connection with the server
+     *
+     * useful properties or methods:
+     * $conn->resourceId
+     * $conn->remoteAddress
+     * $conn->getRemoteAddress()  see more in vendor\react\socket\src\ConnectionInterface.php
+     * $conn->getLocalAddress()  see more in vendor\react\socket\src\ConnectionInterface.php
+     *
+     * @param ConnectionInterface $conn     The connection object
+     */
     public function onOpen(ConnectionInterface $conn) {
         Logger::debug($this, "new connection ({$conn->resourceId}) from IP {$conn->remoteAddress}");
         $this->clients->attach($conn);
     }
 
+    /**
+     * The method defining the onClose event of each client closing connection
+     *
+     * @param ConnectionInterface $conn     The connection object
+     */
     public function onClose(ConnectionInterface $conn) {
         Logger::debug($this, "closing connection ({$conn->resourceId})");
         $this->clients->detach($conn);
@@ -147,6 +191,14 @@ class WampServer implements WampServerInterface {
         }
     }
 
+    /**
+     * The error handler method
+     *
+     * from the Exception object you can use $e->getMessage() $e->getFile() $e->getLine() $e->getTrace() to get more exception info
+     *
+     * @param ConnectionInterface $conn     The connection object
+     * @param \Exception $e                 The Exception object
+     */
     public function onError(ConnectionInterface $conn, \Exception $e) {
         Logger::debug($this, "An error has occurred {$e->getMessage()}");
         $conn->close();
@@ -180,11 +232,19 @@ class WampServer implements WampServerInterface {
         }
     }
 
+    /**
+     * this is just a method that is being defined here so clients can make a demo RPC
+     */
     private function getphpversion()
     {
         return phpversion();
     }
 
+    /**
+     * It is handy to have the $loop object, note that it is being defined by ref
+     *
+     * @param &$loop
+     */
     public function setLoop(&$loop)
     {
         $this->loop = $loop;
@@ -193,7 +253,11 @@ class WampServer implements WampServerInterface {
     }
 
     /**
+     * A method to define loop works
+     *
      * add all the periodic timers you want here
+     *
+     * I am using this method to define periodic timers to add some fake traffic to the topics used in the demo
      */
     private function setPeriodicTimer(){
         // this will simulate activity in Jokes topic
