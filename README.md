@@ -12,7 +12,7 @@ For the demo 2, since the intended clients are browser clients I will be using a
 
 
 ## Disclaimer:
-Currently (December 2023) autobahn-js version is 22.11.1 and it is intended to work with the WAMP V2 protocol.
+Currently (December 2023) autobahn-js version is 22.11.1 and it is intended to work with WAMP V2 protocol.
 
 Ratchet is considered old software, and there are other alternatives to implement websockets using PHP.
 
