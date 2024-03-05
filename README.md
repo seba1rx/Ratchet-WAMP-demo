@@ -2,8 +2,9 @@
 
 ##### this demo contains 2 demos:
 
-demo 1: a chat demo using a simple websocket server
-demo 2: a chat demo using a wamp server (this is wamp v1)
+- demo 1: a chat demo using a simple websocket server
+  
+- demo 2: a chat demo using a wamp server (this is wamp v1)
 
 For the demo 1 there is no need for a special library as the native js functions are sufficient to handle connection and events.
 
